@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>TexasCalc</title>
+  <meta name="description" content="Calculadora de Texas Hold'em: pot odds, equidade pela regra do 4 e 2 e EV do call.">
+  <meta name="theme-color" content="#06090a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TexasCalc">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <div class="brand">
+        <span class="brand__mark" aria-hidden="true">♠</span>
+        <div>
+          <h1>TexasCalc</h1>
+          <p>Pot odds · Equidade · EV</p>
+        </div>
+      </div>
+      <button class="ghost-btn" id="reset" type="button" aria-label="Limpar valores">Limpar</button>
+    </header>
+
+    <div class="segmented" role="radiogroup" aria-label="Rua">
+      <span class="segmented__thumb" aria-hidden="true"></span>
+      <button type="button" role="radio" aria-checked="true" data-street="flop">Flop <small>×4</small></button>
+      <button type="button" role="radio" aria-checked="false" data-street="turn">Turn <small>×2</small></button>
+    </div>
+
+    <section class="card">
+      <div class="fields">
+        <label class="field">
+          <span class="field__label">Pote atual</span>
+          <span class="field__box">
+            <input id="pot" inputmode="decimal" autocomplete="off" placeholder="0" aria-describedby="pot-hint">
+          </span>
+          <span class="field__hint" id="pot-hint">com a aposta dele</span>
+        </label>
+        <label class="field">
+          <span class="field__label">Aposta a pagar</span>
+          <span class="field__box">
+            <input id="call" inputmode="decimal" autocomplete="off" placeholder="0">
+          </span>
+          <span class="field__hint">seu call</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="outs">
+        <div>
+          <span class="field__label">Outs <button type="button" class="help-btn" data-help="outs" aria-label="O que é outs?">?</button></span>
+          <span class="field__hint">cartas que melhoram sua mão</span>
+        </div>
+        <div class="stepper">
+          <button type="button" class="stepper__btn" data-step="-1" aria-label="Diminuir outs">−</button>
+          <output id="outs" aria-live="polite">0</output>
+          <button type="button" class="stepper__btn" data-step="1" aria-label="Aumentar outs">+</button>
+        </div>
+      </div>
+      <div class="chips" aria-label="Draws comuns">
+        <button type="button" class="chip" data-outs="9">Flush <b>9</b></button>
+        <button type="button" class="chip" data-outs="8">Seq. aberta <b>8</b></button>
+        <button type="button" class="chip" data-outs="4">Gutshot <b>4</b></button>
+        <button type="button" class="chip" data-outs="15">Flush + Seq. <b>15</b></button>
+        <button type="button" class="chip" data-outs="2">Par → Trinca <b>2</b></button>
+      </div>
+    </section>
+
+    <section class="result" id="result" data-verdict="none" aria-live="polite">
+      <div class="result__head">
+        <span class="result__verdict" id="verdict">Preencha a mão</span>
+        <span class="result__ev">
+          <span class="result__ev-label">EV do call <button type="button" class="help-btn" data-help="ev" aria-label="O que é EV do call?">?</button></span>
+          <span class="result__ev-value" id="ev">—</span>
+        </span>
+      </div>
+
+      <div class="meter" aria-hidden="true">
+        <div class="meter__fill" id="meter-fill"></div>
+        <div class="meter__mark" id="meter-mark"><span>precisa</span></div>
+      </div>
+
+      <dl class="stats">
+        <div class="stat">
+          <dt>Pot odds <button type="button" class="help-btn" data-help="odds" aria-label="O que é pot odds?">?</button></dt>
+          <dd id="odds">—</dd>
+          <span class="stat__sub" id="ratio">—</span>
+        </div>
+        <div class="stat">
+          <dt>Equidade <button type="button" class="help-btn" data-help="equity" aria-label="O que é equidade?">?</button></dt>
+          <dd id="equity">—</dd>
+          <span class="stat__sub" id="equity-sub">outs × 4</span>
+        </div>
+      </dl>
+      <p class="result__note" id="note">Informe o pote, o call e seus outs.</p>
+    </section>
+
+    <footer class="foot">
+      Estimativas pela Regra do 4 e 2. Use como apoio à decisão, não como garantia.
+    </footer>
+  </main>
+
+  <dialog class="sheet" id="help" aria-labelledby="help-title">
+    <div class="sheet__grip" aria-hidden="true"></div>
+    <header class="sheet__head">
+      <h2 id="help-title"></h2>
+      <button type="button" class="sheet__close" id="help-close" aria-label="Fechar">✕</button>
+    </header>
+    <div class="sheet__body" id="help-body"></div>
+  </dialog>
+
+  <template id="help-outs" data-title="O que são outs?">
+    <p>São as cartas que ainda estão no baralho e que, se saírem, transformam sua mão provavelmente perdedora numa <strong>mão vencedora</strong>.</p>
+    <div class="example">
+      <span class="example__tag">Exemplo</span>
+      <p>Você tem <b class="card-red">A♥ 7♥</b> e o flop veio <b class="card-red">K♥ 9♥</b> <b>2♣</b>. São 4 copas: falta uma para o flush. O baralho tem 13 copas e 4 já estão visíveis, então sobram <strong>9 outs</strong>.</p>
+    </div>
+    <table class="help-table">
+      <tr><td>Flush</td><td>falta 1 carta do naipe</td><td>9</td></tr>
+      <tr><td>Seq. aberta</td><td>8-9 com 7-10: 6 ou J</td><td>8</td></tr>
+      <tr><td>Gutshot</td><td>8-9 com 6-J: só o 10</td><td>4</td></tr>
+      <tr><td>Flush + Seq.</td><td>os dois draws juntos</td><td>15</td></tr>
+      <tr><td>Par → Trinca</td><td>os dois iguais restantes</td><td>2</td></tr>
+    </table>
+    <p class="tip">Não conte cartas que também ajudam o adversário. Ex.: com a mesa pareada, seu flush pode perder para um full house.</p>
+  </template>
+
+  <template id="help-odds" data-title="O que são pot odds?">
+    <p>É o <strong>preço</strong> do call comparado ao que você pode ganhar. Mostra quanta equidade você <strong>precisa</strong> para o call valer a pena.</p>
+    <div class="example">
+      <span class="example__tag">Exemplo</span>
+      <p>Pote de <b>300</b> (já com a aposta dele) e call de <b>100</b>. Você paga 100 para disputar 400 no total: 100 ÷ 400 = <strong>25%</strong>.</p>
+      <p>Em proporção: o pote paga <strong>3 : 1</strong>, ou seja, 3 fichas para cada 1 que você arrisca.</p>
+    </div>
+    <p class="tip">Na barra do resultado, o tracinho “precisa” marca as pot odds.</p>
+  </template>
+
+  <template id="help-equity" data-title="O que é equidade?">
+    <p>É a sua <strong>chance de vencer</strong> a mão. O app estima pela <strong>Regra do 4 e 2</strong>:</p>
+    <table class="help-table">
+      <tr><td>Flop</td><td>faltam 2 cartas</td><td>outs × 4</td></tr>
+      <tr><td>Turn</td><td>falta 1 carta</td><td>outs × 2</td></tr>
+    </table>
+    <div class="example">
+      <span class="example__tag">Exemplo</span>
+      <p>Flush draw com 9 outs: <strong>36%</strong> no flop, <strong>18%</strong> no turn.</p>
+    </div>
+    <p class="tip">Se a equidade for maior que as pot odds, o call é lucrativo.</p>
+  </template>
+
+  <template id="help-ev" data-title="O que é o EV do call?">
+    <p><strong>Valor esperado</strong>: quanto você ganha ou perde <strong>em média</strong> pagando nessa situação, se ela se repetisse muitas vezes.</p>
+    <div class="example">
+      <span class="example__tag">Exemplo · pote 300, call 100, 36%</span>
+      <table class="help-table">
+        <tr><td>Acerta</td><td>36% × +300</td><td class="pos">+108</td></tr>
+        <tr><td>Erra</td><td>64% × −100</td><td class="neg">−64</td></tr>
+        <tr><td><strong>EV</strong></td><td>108 − 64</td><td class="pos"><strong>+44</strong></td></tr>
+      </table>
+    </div>
+    <p>Nessa mão você ganha 300 ou perde 100. Mas repetindo o call 100 vezes, sai cerca de <strong>4.400 fichas</strong> na frente.</p>
+    <p class="tip"><span class="pos">Verde (+)</span> = lucro no longo prazo. <span class="neg">Vermelho (−)</span> = prejuízo: melhor largar a mão.</p>
+  </template>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
